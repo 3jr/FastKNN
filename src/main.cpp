@@ -2,7 +2,7 @@
 
 #include "kdtree.hpp"
 
-constexpr std::array<double, 1>::size_type dims = 5;
+constexpr std::array<double, 1>::size_type dims = 10;
 
 void gen_points(std::vector<std::array<double, dims>> &ps,
     std::array<double, dims> &p, int d, int n) {
@@ -20,7 +20,7 @@ void f() {
   std::vector<std::array<double, dims>> points;
   std::array<double, dims> dummy;
   gen_points(points, dummy, 0, 5);
-  std::cout << "input generated\n";
+  //std::cout << "input generated\n";
   kdtree::knn(points, 5);
 }
 

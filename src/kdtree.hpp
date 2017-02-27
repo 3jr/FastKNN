@@ -117,6 +117,7 @@ void searchNNDown(Size divI, ElemIter begin, Size size,
   while (divI < secoundLastLevel) {
     auto div = tree.divisions[divI];
     auto left = p[div.dim] < div.p;
+    //std::cout << "" << size << (left ? "left" : "right") << '\n';
     divI = 2 * divI + (left ? 1 : 2);
     size /= 2;
     begin = left ? begin : begin + size;
@@ -154,6 +155,7 @@ void searchNNUp(Size divI, ElemIter begin, Size size,
       auto beginOther = begin + (isRightChild ? -size : +size);
       auto sizeOther = size;
       auto divOther = divI + (isRightChild ? -1 : +1);
+      //std::cout << "" << size << " " << (!isRightChild ? "left" : "right") << " other " << divI << " " << divOther << '\n';
       searchNNDown(divOther, beginOther, sizeOther,
         size,
         minDistInTree, minDistInTreePerDim,
@@ -162,21 +164,22 @@ void searchNNUp(Size divI, ElemIter begin, Size size,
     }
     auto beginUp = begin + (isRightChild ? -size : 0);
     auto sizeUp = size * 2;
-    auto divUp = (divI / 2) - 1;
+    auto divUp = (divI - 1) / 2;
     begin = beginUp;
     size = sizeUp;
     divI = divUp;
+    //std::cout << "" << size << " " << "up" << " " << minDistInTree << " " << divI << '\n';
   }
 }
 
 template<Size DIMS>
 void knn(const vector<Point<DIMS>> &points, int k) {
-  //priority_queue<tuple<Real, Size>, vector<tuple<Real, Size>, std::greater<int>> nearest{};
   auto tree = buildKdTree(points);
   std::cout << "tree build done"  << '\n';
   auto secoundLastLevel = tree.divisions.size() / 2; // always floor b/c size is odd
   auto initSize = 1 << log2ceil(tree.elems.size());
   for (const auto p : points) {
+    //if (p != Point<DIMS>{1,2,3,2,2}) { continue; }
     vector<tuple<Real, Size>> queueContainer{};
     queueContainer.reserve(k);
     auto compare = [](const tuple<Real, Size> &e1, const tuple<Real, Size> &e2){ return get<Real>(e1) > get<Real>(e2); };
@@ -190,12 +193,12 @@ void knn(const vector<Point<DIMS>> &points, int k) {
       minDistInTree, minDistInTreePerDim,
       nearest,
       p, secoundLastLevel, tree.elems.end(), tree, points, k);
-    std::cout << "elements for this point: "  << nearest.size() << '\n';
+    //std::cout << "elements for this point: "  << nearest.size() << '\n';
     while (nearest.size()) {
-      std::cout << ", "  << get<Size>(nearest.top());
+      //std::cout << ", "  << get<Size>(nearest.top());
       nearest.pop();
     }
-    std::cout << '\n';
+    //std::cout << '\n';
   }
 }
 
