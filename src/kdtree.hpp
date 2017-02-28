@@ -7,6 +7,8 @@
 #include <tuple>
 #include <queue>
 
+#include <iostream>
+
 namespace kdtree {
 
 using std::vector;
@@ -43,7 +45,7 @@ struct KdTree {
 
 using ElemIter = vector<int>::iterator;
 
-Real square(Real v) { return v * v; }
+inline Real square(Real v) { return v * v; }
 
 template<Size DIMS>
 void buildImpl(ElemIter begin, Size size, ElemIter lastElem, vector<Division> &divs, int mydiv,
@@ -70,8 +72,7 @@ void buildImpl(ElemIter begin, Size size, ElemIter lastElem, vector<Division> &d
   buildImpl(mid, size / 2, lastElem, divs, 2 * mydiv + 2, points, depth + 1, maxDepth);
 }
 
-// round up
-int log2ceil(int n) {
+inline int log2ceil(int n) {
   n -= 1;
   int i = 0;
   for (; n != 0; i++) {
@@ -80,8 +81,7 @@ int log2ceil(int n) {
   return i;
 }
 
-// round up
-int log2floor(int n) {
+inline int log2floor(int n) {
   int i = 0;
   for (; n != 0; i++) {
     n >>= 1;
@@ -175,9 +175,14 @@ void searchNNUp(Size divI, ElemIter begin, Size size,
 template<Size DIMS>
 void knn(const vector<Point<DIMS>> &points, int k) {
   auto tree = buildKdTree(points);
-  std::cout << "tree build done"  << '\n';
+  std::cout << "tree build done: ";
+  for (auto d : tree.divisions) {
+    std::cout << d.dim << ',' << d.p << " | ";
+  }
+  std::cout << '\n';
   auto secoundLastLevel = tree.divisions.size() / 2; // always floor b/c size is odd
   auto initSize = 1 << log2ceil(tree.elems.size());
+//#pragma omp parallel
   for (const auto p : points) {
     //if (p != Point<DIMS>{1,2,3,2,2}) { continue; }
     vector<tuple<Real, Size>> queueContainer{};
