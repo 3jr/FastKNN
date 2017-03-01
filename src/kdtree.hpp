@@ -56,7 +56,7 @@ std::string to_string(std::string s) {
   return s;
 }
 
-constexpr bool debug_output = true;
+constexpr bool debug_output = false;
 
 template<typename T>
 void dbg(T v) {
@@ -128,9 +128,13 @@ void buildImpl(ElemIter begin, Size size, ElemIter lastElem, vector<Division> &d
       currentDim = d;
     }
   }
+  dbg("split in dim ", currentDim, ": at ");
   auto mid = std::min(begin + size / 2, lastElem - 1);
   std::nth_element(begin, mid, end,
       [&points, currentDim](int a, int b){ return points[a][currentDim] < points[b][currentDim]; });
+  dbg(points[*mid][currentDim], "=", points[*mid], "[", currentDim, "]\n");
+  dbg("    left: ", to_string(begin, size / 2, lastElem), "\n");
+  dbg("    right: ", to_string(mid, size / 2, lastElem), "\n");
   divs[mydiv] = Division{currentDim, points[*mid][currentDim]};
   buildImpl(begin, size / 2, lastElem, divs, 2 * mydiv + 1, points, depth + 1, maxDepth);
   buildImpl(mid, size / 2, lastElem, divs, 2 * mydiv + 2, points, depth + 1, maxDepth);
@@ -214,30 +218,31 @@ void searchNNUp(Size divI, ElemIter begin, Size size,
     const Point<DIMS> p, Size secoundLastLevel, ElemIter totalEnd, const KdTree &tree, const vector<Point<DIMS>> &points, int k) {
 
   while (size < largestSizeToMoveUpTo) {
-    auto div = tree.divisions[divI];
     auto isRightChild = divI % 2 == 0;
     auto divUpI = (divI - 1) / 2;
     auto divUp = tree.divisions[divUpI];
-    dbg("", "eval other ", size, " ", minDistInTree, "<"
+    auto minDistInTreeOther = minDistInTree;
+    auto minDistInTreePerDimOther = minDistInTreePerDim;
+    auto distInTreeForDim = square(p[divUp.dim] - divUp.p);
+    if (square(p[divUp.dim] - divUp.p) > 0.01) { // if this is the case we cannot assume to win anything
+      minDistInTreeOther += distInTreeForDim - minDistInTreePerDimOther[divUp.dim];
+      minDistInTreePerDimOther[divUp.dim] = distInTreeForDim;
+    }
+    dbg("", "eval other ", size, " ", minDistInTreeOther, "<"
       , (nearest.size() < k ? -1 : get<Real>(nearest.top())), " "
-      , " +", (p[divUp.dim] == divUp.p ? "t" : "f"), " "
-      , minDistInTreePerDim, "\n");
+      , p[divUp.dim], "==", divUp.p, "="
+      , "", (p[divUp.dim] == divUp.p ? "t" : "f"), " "
+      , distInTreeForDim, "=", p, "[", divUp.dim, "]-", divUp.p
+      , minDistInTreePerDimOther, "\n");
     if (nearest.size() < k
+        || square(p[divUp.dim] - divUp.p) < 0.01
         || p[divUp.dim] == divUp.p // in case the decisions while going down were half wrong
-        || minDistInTree < get<Real>(nearest.top())) {
-      auto minDistInTreeOther = minDistInTree;
-      auto minDistInTreePerDimOther = minDistInTreePerDim;
-      auto distInTreeForDim = square(p[div.dim] - div.p);
-      if (p[divUp.dim] != divUp.p) { // if this is the case we cannot assume to win anything
-        minDistInTreeOther += distInTreeForDim - minDistInTreePerDimOther[div.dim];
-        minDistInTreePerDimOther[div.dim] = distInTreeForDim;
-      }
+        || minDistInTreeOther < get<Real>(nearest.top())) {
       auto beginOther = begin + (isRightChild ? -size : +size);
       auto sizeOther = size;
       auto divOther = divI + (isRightChild ? -1 : +1);
       dbg("", "", size, " ", (!isRightChild ? "left" : "right")
-        , " other divI:", divI, " otherI:", divOther, " dim:", div.dim, " "
-        , distInTreeForDim, "=", p, "[", div.dim, "]-", div.p
+        , " other divI:", divI, " otherI:", divOther, " "
         , to_string(begin, size, totalEnd), "\n");
       searchNNDown(divOther, beginOther, sizeOther,
         size,

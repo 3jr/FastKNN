@@ -135,17 +135,18 @@ void run_knn(int pointsPerDim) {
   std::cout << "input generated\n";
   auto tree = kdtree::buildKdTree(points);
   std::cout << "tree (depth:" << tree.depth << ") build done: \n";
-  for (int s = 1; s < tree.divisions.size() - 1; s *= 2) {
-    for (int i = 0; i < s; ++i) {
-      auto d = tree.divisions[s - 1 + i];
-      std::cout << d.dim << '(' << d.p << ") | ";
-    }
-    std::cout << '\n';
-  }
-  std::cout << '\n';
-  std::cout << kdtree::to_string(points[2]) << '\n';
+  //for (int s = 1; s < tree.divisions.size() - 1; s *= 2) {
+  //  for (int i = 0; i < s; ++i) {
+  //    auto d = tree.divisions[s - 1 + i];
+  //    std::cout << d.dim << '(' << d.p << ") | ";
+  //  }
+  //  std::cout << '\n';
+  //}
+  //std::cout << '\n';
   for (int i = 0; i < points.size(); ++i) {
-    if (i != 1) { continue; }
+    //if (i != 1) { continue; }
+    std::cout << i << " ";
+    if (i > 10) { break; }
     auto p = points[i];
     auto n1 = kdtree::knn(tree, points, k, p);
     auto n2 = simple_knn(points, k, p);
@@ -197,6 +198,8 @@ BOOST_AUTO_TEST_CASE(full_grid) {
   run_knn<6>(5);
   run_knn<7>(5);
   run_knn<8>(5);
+  run_knn<9>(5);
+  run_knn<10>(5);
 }
 
 BOOST_AUTO_TEST_CASE(build_huge_tree) {
