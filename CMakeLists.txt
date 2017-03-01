@@ -11,7 +11,8 @@ include_directories(src)
 
 # include_directories(${Boost_INCLUDE_DIRS})
 
-set(CMAKE_CXX_FLAGS "-Wno-ignored-attributes -pedantic ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "-Wno-ignored-attributes -pedantic -Wall -Wno-sign-compare ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -fno-omit-frame-pointer")
 
 #However, the file(GLOB...) allows for wildcard additions:
 file(GLOB SOURCES_COMMON

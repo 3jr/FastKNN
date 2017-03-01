@@ -16,6 +16,7 @@ using std::array;
 using std::tuple;
 using std::get;
 using std::priority_queue;
+using std::to_string;
 
 using Real = double;
 using Size = array<Real, 1>::size_type;
@@ -31,7 +32,7 @@ struct Division {
 struct KdTree {
   KdTree(int size, int depth)
     : depth(depth),
-      //divisions(2 * (1 << depth) - 1) { // {sum_{i=0}^{depth} i}
+      // divisions(2 * (1 << depth) - 1) { // {sum_{i=0}^{depth} i}
       divisions((1 << depth) - 1) {
     elems.reserve(size);
     for (auto i = 0; i < size; ++i) {
@@ -62,6 +63,9 @@ void buildImpl(ElemIter begin, Size size, ElemIter lastElem, vector<Division> &d
     if (variance > currentVariance) {
       currentDim = d;
       currentVariance = variance;
+    }
+    if (square(variance - currentVariance) < 0.01) {
+      currentDim = d;
     }
   }
   auto mid = std::min(begin + size / 2, lastElem - 1);
@@ -106,6 +110,34 @@ Real distSquared(Point<DIMS> p1, Point<DIMS> p2) {
   return d;
 }
 
+int countVisitedLeafes = 0;
+
+std::string to_string(ElemIter begin, Size size, ElemIter totalEnd) {
+  std::string s{"["};
+  for (auto i = begin; i < std::min(begin + size, totalEnd); ++i) {
+    s += to_string(*i) + " ";
+  }
+  return s + "]";
+}
+
+template<typename T>
+std::string to_string(vector<T> v) {
+  std::string s{"["};
+  for (auto e : v) {
+    s += to_string(e) + " ";
+  }
+  return s + "]";
+}
+
+template<typename T, Size DIMS>
+std::string to_string(array<T, DIMS> a) {
+  std::string s{"["};
+  for (auto e : a) {
+    s += to_string(e) + " ";
+  }
+  return s + "]";
+}
+
 template<Size DIMS, typename Queue>
 void searchNNDown(Size divI, ElemIter begin, Size size,
     Size largestSizeToMoveUpTo,
@@ -113,16 +145,19 @@ void searchNNDown(Size divI, ElemIter begin, Size size,
     Queue &nearest,
     const Point<DIMS> p, Size secoundLastLevel, ElemIter totalEnd, const KdTree &tree, const vector<Point<DIMS>> &points, int k) {
 
+  ++countVisitedLeafes;
 
   while (divI < secoundLastLevel) {
     auto div = tree.divisions[divI];
     auto left = p[div.dim] < div.p;
-    //std::cout << "" << size << (left ? "left" : "right") << '\n';
+    std::cout << "" << size << " " << (left ? "left" : "right") << " "
+      << to_string(begin, size, totalEnd) << '\n';
     divI = 2 * divI + (left ? 1 : 2);
     size /= 2;
     begin = left ? begin : begin + size;
   }
   for (auto i = begin; i < std::min(begin + size, totalEnd); i++) {
+    std::cout << "[" << *i << "]";
     auto dist = distSquared(points[*i], p);
     if (nearest.size() < k) {
       nearest.push({dist, *i});
@@ -141,24 +176,30 @@ void searchNNDown(Size divI, ElemIter begin, Size size,
 template<Size DIMS, typename Queue>
 void searchNNUp(Size divI, ElemIter begin, Size size,
     Size largestSizeToMoveUpTo,
-    Real minDistInTree, array<Real, DIMS> minDistInTreePerDim /* optimize copy? */,
+    Real minDistInTree, array<Real, DIMS> &minDistInTreePerDim,
     Queue &nearest,
     const Point<DIMS> p, Size secoundLastLevel, ElemIter totalEnd, const KdTree &tree, const vector<Point<DIMS>> &points, int k) {
 
   while (size < largestSizeToMoveUpTo) {
     auto div = tree.divisions[divI];
     auto isRightChild = divI % 2 == 0;
+    std::cout << "eval other " << minDistInTree << " < " <<  get<Real>(nearest.top()) << " "
+      << to_string(minDistInTreePerDim) << '\n';
     if (nearest.size() < k || minDistInTree < get<Real>(nearest.top())) {
+      auto minDistInTreeOther = minDistInTree;
+      auto minDistInTreePerDimOther = minDistInTreePerDim;
       auto distInTreeForDim = square(p[div.dim] - div.p);
-      minDistInTree += distInTreeForDim - minDistInTreePerDim[div.dim];
-      minDistInTreePerDim[div.dim] = distInTreeForDim;
+      minDistInTreeOther += distInTreeForDim - minDistInTreePerDimOther[div.dim];
+      minDistInTreePerDimOther[div.dim] = distInTreeForDim;
       auto beginOther = begin + (isRightChild ? -size : +size);
       auto sizeOther = size;
       auto divOther = divI + (isRightChild ? -1 : +1);
-      //std::cout << "" << size << " " << (!isRightChild ? "left" : "right") << " other " << divI << " " << divOther << '\n';
+      std::cout << "" << size << " " << (!isRightChild ? "left" : "right")
+        << " other divI:" << divI << " otherI:" << divOther << " dim:" << div.dim
+        << to_string(begin, size, totalEnd) << '\n';
       searchNNDown(divOther, beginOther, sizeOther,
         size,
-        minDistInTree, minDistInTreePerDim,
+        minDistInTreeOther, minDistInTreePerDimOther,
         nearest,
         p, secoundLastLevel, totalEnd, tree, points, k);
     }
@@ -168,43 +209,59 @@ void searchNNUp(Size divI, ElemIter begin, Size size,
     begin = beginUp;
     size = sizeUp;
     divI = divUp;
-    //std::cout << "" << size << " " << "up" << " " << minDistInTree << " " << divI << '\n';
+    std::cout << "" << size << " " << "up" << " " << minDistInTree << " " << divI << " "
+      << to_string(begin, size, totalEnd) << '\n';
   }
 }
 
 template<Size DIMS>
-void knn(const vector<Point<DIMS>> &points, int k) {
-  auto tree = buildKdTree(points);
-  std::cout << "tree build done: ";
-  for (auto d : tree.divisions) {
-    std::cout << d.dim << ',' << d.p << " | ";
+void printTreeDivisions(const KdTree &tree) {
+  std::cout << "tree (depth:" << tree.depth << ") build done: \n";
+  for (int d = 0, s = 1; d < tree.depth; ++d, s *= 2) {
+    std::vector<int> histogramm(DIMS, 0);
+    for (int i = 0; i < s; ++i) {
+      histogramm[tree.divisions[s + i].dim] += 1;
+    }
+    std::cout << "depth " << d << ":   ";
+    for (int i = 0; i < DIMS; ++i) {
+      if (histogramm[i] > 0) {
+        std::cout << i << ":" << histogramm[i] << "  ";
+      }
+    }
+    std::cout << '\n';
   }
-  std::cout << '\n';
+}
+
+template<Size DIMS>
+vector<Size> knn(KdTree tree, const vector<Point<DIMS>> &points, int k, Point<DIMS> p) {
+  for (const auto e : tree.elems) {
+    std::cout << e << " ";
+  }
+  std::cout << "\n\n";
   auto secoundLastLevel = tree.divisions.size() / 2; // always floor b/c size is odd
   auto initSize = 1 << log2ceil(tree.elems.size());
-//#pragma omp parallel
-  for (const auto p : points) {
-    //if (p != Point<DIMS>{1,2,3,2,2}) { continue; }
-    vector<tuple<Real, Size>> queueContainer{};
-    queueContainer.reserve(k);
-    auto compare = [](const tuple<Real, Size> &e1, const tuple<Real, Size> &e2){ return get<Real>(e1) > get<Real>(e2); };
-    priority_queue<tuple<Real, Size>, decltype(queueContainer), decltype(compare)> nearest{compare, queueContainer};
-    Size divI = 0; // index of division
-    array<Real, DIMS> minDistInTreePerDim{}; // {} to zero initialize
-    Real minDistInTree = 0;
-    // search Down
-    searchNNDown(divI, tree.elems.begin(), initSize,
-      initSize,
-      minDistInTree, minDistInTreePerDim,
-      nearest,
-      p, secoundLastLevel, tree.elems.end(), tree, points, k);
-    //std::cout << "elements for this point: "  << nearest.size() << '\n';
-    while (nearest.size()) {
-      //std::cout << ", "  << get<Size>(nearest.top());
-      nearest.pop();
-    }
-    //std::cout << '\n';
+  vector<tuple<Real, Size>> queueContainer{};
+  queueContainer.reserve(k);
+  auto compare = [](const tuple<Real, Size> &e1, const tuple<Real, Size> &e2){ return get<Real>(e1) < get<Real>(e2); };
+  priority_queue<tuple<Real, Size>, decltype(queueContainer), decltype(compare)> nearest{compare, queueContainer};
+  Size divI = 0; // index of division
+  array<Real, DIMS> minDistInTreePerDim{}; // {} to zero initialize
+  Real minDistInTree = 0;
+  // search Down
+  countVisitedLeafes = 0;
+  searchNNDown(divI, tree.elems.begin(), initSize,
+    initSize,
+    minDistInTree, minDistInTreePerDim,
+    nearest,
+    p, secoundLastLevel, tree.elems.end(), tree, points, k);
+  std::cout << "Visited Leafes: " << countVisitedLeafes << "/" << tree.divisions.size() << '\n';
+  vector<Size> result{};
+  result.reserve(k);
+  while (nearest.size() > 0) {
+    result.push_back(get<Size>(nearest.top()));
+    nearest.pop();
   }
+  return result;
 }
 
 }
