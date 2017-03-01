@@ -134,13 +134,18 @@ void run_knn(int pointsPerDim) {
   auto points = gen_full_grid<dims>(pointsPerDim);
   std::cout << "input generated\n";
   auto tree = kdtree::buildKdTree(points);
-  std::cout << "tree (depth:" << tree.depth << ") build done: ";
-  //for (auto d : tree.divisions) {
-  //  std::cout << d.dim << ',' << d.p << " | ";
-  //}
+  std::cout << "tree (depth:" << tree.depth << ") build done: \n";
+  for (int s = 1; s < tree.divisions.size() - 1; s *= 2) {
+    for (int i = 0; i < s; ++i) {
+      auto d = tree.divisions[s - 1 + i];
+      std::cout << d.dim << '(' << d.p << ") | ";
+    }
+    std::cout << '\n';
+  }
   std::cout << '\n';
+  std::cout << kdtree::to_string(points[2]) << '\n';
   for (int i = 0; i < points.size(); ++i) {
-    if (i != 23) { continue; }
+    if (i != 1) { continue; }
     auto p = points[i];
     auto n1 = kdtree::knn(tree, points, k, p);
     auto n2 = simple_knn(points, k, p);
@@ -155,7 +160,6 @@ void run_knn(int pointsPerDim) {
       std::cout << "   " << n3 << " " << i << '\n';
     }
     if (n3.size() <  n1.size()) {
-      std::cout << "IGNORED";
       continue; // we can't check equality b/c it is not unique
     }
     BOOST_CHECK(n1 == n2);
@@ -167,7 +171,7 @@ void run_knn(int pointsPerDim) {
 }
 
 BOOST_AUTO_TEST_CASE(full_grid_var1) {
-  run_knn<3>(3);
+  run_knn<3>(4);
 }
 
 // 0  1  2  3

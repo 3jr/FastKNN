@@ -28,6 +28,6 @@ set(SOURCES_TESTS ${SOURCES_COMMON} ${SOURCES_TESTS})
 
 add_executable(boost_tests ${SOURCES_TESTS})
 target_compile_options(boost_tests PUBLIC -std=c++14 -march=native -mtune=native)
-target_compile_options(boost_tests PUBLIC ${HPX_APPLICATION_CFLAGS} ${OpenMP_CXX_FLAGS})
-target_link_libraries(boost_tests PUBLIC ${HPX_APPLICATION_LDFLAGS} ${Boost_LIBRARIES} ${OpenMP_CXX_FLAGS})
+target_compile_options(boost_tests PUBLIC ${OpenMP_CXX_FLAGS})
+target_link_libraries(boost_tests PUBLIC ${Boost_LIBRARIES} ${OpenMP_CXX_FLAGS})
 INSTALL_TARGETS(/bin boost_tests)
