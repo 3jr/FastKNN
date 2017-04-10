@@ -76,7 +76,7 @@ void dbg(T v, Ts&&... vs) {
 }
 
 template<Size DIMS>
-using Point = array<Real, DIMS>; // 160 byte
+using Point = array<Real, DIMS>;
 
 struct Division {
   int dim;
@@ -95,6 +95,7 @@ struct KdTree {
   }
   int depth;
   vector<Division> divisions;
+  // the permutation of the points so that every tree node has a continous range
   vector<int> elems;
 };
 

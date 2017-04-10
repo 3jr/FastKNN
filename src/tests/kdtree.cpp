@@ -72,7 +72,7 @@ void run_knn(int pointsPerDim) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(full_grid_var1) {
+BOOST_AUTO_TEST_CASE(demo) {
   run_knn<3>(4);
 }
 
